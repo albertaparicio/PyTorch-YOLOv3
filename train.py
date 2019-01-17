@@ -11,7 +11,9 @@ from utils.datasets import *
 from utils.parse_config import *
 from utils.utils import *
 
-parser = argparse.ArgumentParser()
+parser = argparse.ArgumentParser(
+    description='Train YOLOv3',
+    formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 # Numeric arguments
 parser.add_argument("--epochs", type=int, default=30,
                     help="number of epochs")
@@ -29,8 +31,6 @@ parser.add_argument("--checkpoint_interval", type=int, default=1,
                     help="interval between saving model weights")
 
 # Path arguments
-parser.add_argument("--image_folder", type=str, default="data/samples",
-                    help="path to dataset")
 parser.add_argument("--checkpoint_dir", type=str, default="checkpoints",
                     help="directory where model checkpoints are saved")
 parser.add_argument("--log_dir", type=str, default="logs",
