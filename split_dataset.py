@@ -30,12 +30,13 @@ def main(args):
             with open(label_file.strip(), 'r') as l_f:
                 label_content = l_f.readline()
 
-                label_id = int(label_content.split()[0])
+                if len(label_content) > 0:
+                    label_id = int(label_content.split()[0])
 
-                if label_id not in labels_list.keys():
-                    labels_list[label_id] = []
+                    if label_id not in labels_list.keys():
+                        labels_list[label_id] = []
 
-                labels_list[label_id].append(fname)
+                    labels_list[label_id].append(fname)
 
     train_res = []
     valid_res = []
