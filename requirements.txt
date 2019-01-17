@@ -1,5 +1,5 @@
 matplotlib
-numpy
+numpy~=1.15.0
 pillow
 scikit-image
 tensorboardX
