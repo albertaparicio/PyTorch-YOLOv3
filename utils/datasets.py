@@ -1,20 +1,12 @@
 import glob
-import random
 import os
+
 import numpy as np
-
 import torch
-
-from torch.utils.data import Dataset
 from PIL import Image
-import torchvision.transforms as transforms
-
-import matplotlib.pyplot as plt
-import matplotlib.patches as patches
-
 from skimage.transform import resize
+from torch.utils.data import Dataset
 
-import sys
 
 class ImageFolder(Dataset):
     def __init__(self, folder_path, img_size=416):
@@ -34,7 +26,7 @@ class ImageFolder(Dataset):
         # Add padding
         input_img = np.pad(img, pad, 'constant', constant_values=127.5) / 255.
         # Resize and normalize
-        input_img = resize(input_img, (*self.img_shape, 3), mode='reflect')
+        input_img = resize(input_img, (*self.img_shape, 3), mode='reflect', anti_aliasing=True)
         # Channels-first
         input_img = np.transpose(input_img, (2, 0, 1))
         # As pytorch tensor
@@ -50,15 +42,17 @@ class ListDataset(Dataset):
     def __init__(self, list_path, img_size=416):
         with open(list_path, 'r') as file:
             self.img_files = file.readlines()
-        self.label_files = [path.replace('images', 'labels').replace('.png', '.txt').replace('.jpg', '.txt') for path in self.img_files]
+        self.label_files = [
+            path.replace('images', 'labels').replace('.png', '.txt').replace('.jpg', '.txt') for
+            path in self.img_files]
         self.img_shape = (img_size, img_size)
         self.max_objects = 50
 
     def __getitem__(self, index):
 
-        #---------
+        # ---------
         #  Image
-        #---------
+        # ---------
 
         img_path = self.img_files[index % len(self.img_files)].rstrip()
         img = np.array(Image.open(img_path))
@@ -79,15 +73,15 @@ class ListDataset(Dataset):
         input_img = np.pad(img, pad, 'constant', constant_values=128) / 255.
         padded_h, padded_w, _ = input_img.shape
         # Resize and normalize
-        input_img = resize(input_img, (*self.img_shape, 3), mode='reflect')
+        input_img = resize(input_img, (*self.img_shape, 3), mode='reflect', anti_aliasing=True)
         # Channels-first
         input_img = np.transpose(input_img, (2, 0, 1))
         # As pytorch tensor
         input_img = torch.from_numpy(input_img).float()
 
-        #---------
+        # ---------
         #  Label
-        #---------
+        # ---------
 
         label_path = self.label_files[index % len(self.img_files)].rstrip()
 
@@ -95,10 +89,10 @@ class ListDataset(Dataset):
         if os.path.exists(label_path):
             labels = np.loadtxt(label_path).reshape(-1, 5)
             # Extract coordinates for unpadded + unscaled image
-            x1 = w * (labels[:, 1] - labels[:, 3]/2)
-            y1 = h * (labels[:, 2] - labels[:, 4]/2)
-            x2 = w * (labels[:, 1] + labels[:, 3]/2)
-            y2 = h * (labels[:, 2] + labels[:, 4]/2)
+            x1 = w * (labels[:, 1] - labels[:, 3] / 2)
+            y1 = h * (labels[:, 2] - labels[:, 4] / 2)
+            x2 = w * (labels[:, 1] + labels[:, 3] / 2)
+            y2 = h * (labels[:, 2] + labels[:, 4] / 2)
             # Adjust for added padding
             x1 += pad[1][0]
             y1 += pad[0][0]

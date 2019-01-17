@@ -1,6 +1,7 @@
-scikit-image
+matplotlib
 numpy
+pillow
+scikit-image
+tensorboardX
 torch>=0.4.0
 torchvision
-pillow
-matplotlib
