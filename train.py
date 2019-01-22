@@ -30,7 +30,7 @@ def main(opt):
     val_path = data_config["valid"]
 
     # Get hyper parameters
-    hyperparams = parse_model_config(opt.model_config_path)[0]
+    # hyperparams = parse_model_config(opt.model_config_path)[0]
     # learning_rate = float(hyperparams["learning_rate"])
     # momentum = float(hyperparams["momentum"])
     # decay = float(hyperparams["decay"])
@@ -45,8 +45,7 @@ def main(opt):
     if opt.start_epochs > 0:
         assert opt.epochs > opt.start_epochs
 
-        model.load_weights("%s/%d.weights" % (
-            opt.checkpoint_dir, opt.start_epochs))
+        model.load_weights(f"{opt.checkpoint_dir}/{opt.start_epochs}.weights")
 
     if cuda:
         model = model.cuda()
@@ -64,6 +63,12 @@ def main(opt):
     Tensor = torch.cuda.FloatTensor if cuda else torch.FloatTensor
 
     optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, model.parameters()))
+
+    if opt.start_epochs > 0:
+        opt_state_dict = torch.load(os.path.join(
+            opt.checkpoint_dir, f'{opt.start_epochs}.opt.weights'))
+
+        optimizer.load_state_dict(opt_state_dict)
 
     for epoch in range(opt.start_epochs, opt.epochs):
         model.train()
@@ -131,7 +136,9 @@ def main(opt):
                 writer.add_scalar('val/recall', model.losses["recall"], curr_step)
 
         if epoch % opt.checkpoint_interval == 0:
-            model.save_weights("%s/%d.weights" % (opt.checkpoint_dir, epoch))
+            model.save_weights(f"{opt.checkpoint_dir}/{epoch}.weights")
+            torch.save(optimizer.state_dict(),
+                       os.path.join(opt.checkpoint_dir, f'{epoch}.opt.weights'))
 
     writer.close()
 
