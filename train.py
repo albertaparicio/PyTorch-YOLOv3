@@ -43,10 +43,10 @@ def main(opt):
 
     # Load previous checkpoint if start-epoch > 0
     if opt.start_epochs > 0:
-        assert opt.epochs > opt.start_epoch
+        assert opt.epochs > opt.start_epochs
 
         model.load_weights("%s/%d.weights" % (
-            opt.checkpoint_dir, opt.start_epoch - 1))
+            opt.checkpoint_dir, opt.start_epochs))
 
     if cuda:
         model = model.cuda()
@@ -65,7 +65,7 @@ def main(opt):
 
     optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, model.parameters()))
 
-    for epoch in range(opt.start_epoch, opt.epochs):
+    for epoch in range(opt.start_epochs, opt.epochs):
         model.train()
         for batch_i, (_, imgs, targets) in enumerate(dataloader):
             imgs = Variable(imgs.type(Tensor))
