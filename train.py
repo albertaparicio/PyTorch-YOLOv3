@@ -41,6 +41,13 @@ def main(opt):
     # model.load_weights(opt.weights_path)
     model.apply(weights_init_normal)
 
+    # Load previous checkpoint if start-epoch > 0
+    if opt.start_epochs > 0:
+        assert opt.epoch > opt.start_epoch
+
+        model.load_weights("%s/%d.weights" % (
+            opt.checkpoint_dir, opt.start_epoch - 1))
+
     if cuda:
         model = model.cuda()
 
@@ -58,7 +65,7 @@ def main(opt):
 
     optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, model.parameters()))
 
-    for epoch in range(opt.epochs):
+    for epoch in range(opt.start_epoch, opt.epochs):
         model.train()
         for batch_i, (_, imgs, targets) in enumerate(dataloader):
             imgs = Variable(imgs.type(Tensor))
@@ -135,6 +142,8 @@ if __name__ == '__main__':
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     # Numeric arguments
     parser.add_argument("--epochs", type=int, default=30,
+                        help="number of epochs")
+    parser.add_argument("--start-epochs", type=int, default=0,
                         help="number of epochs")
     parser.add_argument("--batch_size", type=int, default=16,
                         help="size of each image batch")
