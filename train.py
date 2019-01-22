@@ -43,7 +43,7 @@ def main(opt):
 
     # Load previous checkpoint if start-epoch > 0
     if opt.start_epochs > 0:
-        assert opt.epoch > opt.start_epoch
+        assert opt.epochs > opt.start_epoch
 
         model.load_weights("%s/%d.weights" % (
             opt.checkpoint_dir, opt.start_epoch - 1))
