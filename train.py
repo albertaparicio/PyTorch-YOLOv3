@@ -38,17 +38,30 @@ def main(opt):
 
     # Initiate model
     model = Darknet(opt.model_config_path)
+    model = torch.nn.DataParallel(model)
     # model.load_weights(opt.weights_path)
     model.apply(weights_init_normal)
+
+    if cuda:
+        model = model.cuda()
+
+    optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, model.parameters()),lr=opt.lr)
 
     # Load previous checkpoint if start-epoch > 0
     if opt.start_epochs > 0:
         assert opt.epochs > opt.start_epochs
 
-        model.load_weights(f"{opt.checkpoint_dir}/{opt.start_epochs}.weights")
+        checkpoint = torch.load(os.path.join(opt.checkpoint_dir, f'{opt.start_epochs}.weights'))
 
-    if cuda:
-        model = model.cuda()
+        model.module.load_state_dict(checkpoint['model_state_dict'])
+        optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+
+        #opt_state_dict = torch.load(os.path.join(
+        #    opt.checkpoint_dir, f'{opt.start_epochs}.opt.weights'))
+
+
+        #model.module.load_weights(f"{opt.checkpoint_dir}/{opt.start_epochs}.weights")
+
 
     model.train()
 
@@ -62,14 +75,7 @@ def main(opt):
 
     Tensor = torch.cuda.FloatTensor if cuda else torch.FloatTensor
 
-    optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, model.parameters()))
-
-    if opt.start_epochs > 0:
-        opt_state_dict = torch.load(os.path.join(
-            opt.checkpoint_dir, f'{opt.start_epochs}.opt.weights'))
-
-        optimizer.load_state_dict(opt_state_dict)
-
+    
     for epoch in range(opt.start_epochs, opt.epochs):
         model.train()
         for batch_i, (_, imgs, targets) in enumerate(dataloader):
@@ -80,30 +86,31 @@ def main(opt):
 
             loss = model(imgs, targets)
 
-            loss.backward()
+            loss.mean().backward()
             optimizer.step()
 
             print(f'[Epoch {1 + epoch}/{opt.epochs}, Batch {1 + batch_i}/{len(dataloader)}] '
-                  f'[Losses: x {model.losses["x"]:.5f}, y {model.losses["y"]:.5f}, '
-                  f'w {model.losses["w"]:.5f}, h {model.losses["h"]:.5f}, '
-                  f'conf {model.losses["conf"]:.5f}, cls {model.losses["cls"]:.5f}, '
-                  f'total {loss.item():.5f}, recall: {model.losses["recall"]:.5f}, '
-                  f'precision: {model.losses["precision"]:.5f}]')
+             #     f'[Losses: x {model.module.losses["x"]:.5f}, y {model.module.losses["y"]:.5f}, '
+             #     f'w {model.module.losses["w"]:.5f}, h {model.module.losses["h"]:.5f}, '
+             #     f'conf {model.module.losses["conf"]:.5f}, cls {model.module.losses["cls"]:.5f}, '
+                  f'total {loss.mean().item():.5f} ')
+              #    f'total {loss.item():.5f}, recall: {model.module.losses["recall"]:.5f}, '
+              #    f'precision: {model.module.losses["precision"]:.5f}]')
 
             # Save results to TensorBoard
             curr_step = epoch * len(dataloader) + batch_i
 
-            writer.add_scalar('train/loss_x', model.losses["x"], curr_step)
-            writer.add_scalar('train/loss_y', model.losses["y"], curr_step)
-            writer.add_scalar('train/loss_w', model.losses["w"], curr_step)
-            writer.add_scalar('train/loss_h', model.losses["h"], curr_step)
-            writer.add_scalar('train/loss_conf', model.losses["conf"], curr_step)
-            writer.add_scalar('train/loss_cls', model.losses["cls"], curr_step)
-            writer.add_scalar('train/loss_total', loss.item(), curr_step)
-            writer.add_scalar('train/precision', model.losses["precision"], curr_step)
-            writer.add_scalar('train/recall', model.losses["recall"], curr_step)
+            #writer.add_scalar('train/loss_x', model.module.losses["x"], curr_step)
+            #writer.add_scalar('train/loss_y', model.module.losses["y"], curr_step)
+            #writer.add_scalar('train/loss_w', model.module.losses["w"], curr_step)
+            #writer.add_scalar('train/loss_h', model.module.losses["h"], curr_step)
+            #writer.add_scalar('train/loss_conf', model.module.losses["conf"], curr_step)
+            #writer.add_scalar('train/loss_cls', model.module.losses["cls"], curr_step)
+            writer.add_scalar('train/loss_total', loss.mean().item(), curr_step)
+            #writer.add_scalar('train/precision', model.module.losses["precision"], curr_step)
+            #writer.add_scalar('train/recall', model.module.losses["recall"], curr_step)
 
-            model.seen += imgs.size(0)
+            model.module.seen += imgs.size(0)
 
         # Validation
         with torch.no_grad():
@@ -116,29 +123,32 @@ def main(opt):
                 val_loss = model(imgs, targets)
 
                 print(f'[Validation, Batch {1 + val_batch_i}/{len(val_dataloader)}] '
-                      f'[Losses: x {model.losses["x"]:.5f}, y {model.losses["y"]:.5f}, '
-                      f'w {model.losses["w"]:.5f}, h {model.losses["h"]:.5f}, '
-                      f'conf {model.losses["conf"]:.5f}, cls {model.losses["cls"]:.5f}, '
-                      f'total {val_loss.item():.5f}, recall: {model.losses["recall"]:.5f}, '
-                      f'precision: {model.losses["precision"]:.5f}]')
+#                      f'[Losses: x {model.losses["x"]:.5f}, y {model.losses["y"]:.5f}, '
+#                      f'w {model.losses["w"]:.5f}, h {model.losses["h"]:.5f}, '
+#                      f'conf {model.losses["conf"]:.5f}, cls {model.losses["cls"]:.5f}, '
+#                      f'total {val_loss.item():.5f}, recall: {model.losses["recall"]:.5f}, '
+                      f'total {val_loss.mean().item():.5f}')
+#                      f'precision: {model.losses["precision"]:.5f}]')
 
                 # Save results to TensorBoard
                 curr_step = epoch * len(val_dataloader) + val_batch_i
 
-                writer.add_scalar('val/loss_x', model.losses["x"], curr_step)
-                writer.add_scalar('val/loss_y', model.losses["y"], curr_step)
-                writer.add_scalar('val/loss_w', model.losses["w"], curr_step)
-                writer.add_scalar('val/loss_h', model.losses["h"], curr_step)
-                writer.add_scalar('val/loss_conf', model.losses["conf"], curr_step)
-                writer.add_scalar('val/loss_cls', model.losses["cls"], curr_step)
-                writer.add_scalar('val/loss_total', val_loss.item(), curr_step)
-                writer.add_scalar('val/precision', model.losses["precision"], curr_step)
-                writer.add_scalar('val/recall', model.losses["recall"], curr_step)
+#                writer.add_scalar('val/loss_x', model.module.losses["x"], curr_step)
+#                writer.add_scalar('val/loss_y', model.module.losses["y"], curr_step)
+#                writer.add_scalar('val/loss_w', model.module.losses["w"], curr_step)
+#                writer.add_scalar('val/loss_h', model.module.losses["h"], curr_step)
+#                writer.add_scalar('val/loss_conf', model.module.losses["conf"], curr_step)
+#                writer.add_scalar('val/loss_cls', model.module.losses["cls"], curr_step)
+                writer.add_scalar('val/loss_total', val_loss.mean().item(), curr_step)
+ #               writer.add_scalar('val/precision', model.module.losses["precision"], curr_step)
+ #               writer.add_scalar('val/recall', model.module.losses["recall"], curr_step)
 
         if epoch % opt.checkpoint_interval == 0:
-            model.save_weights(f"{opt.checkpoint_dir}/{epoch}.weights")
-            torch.save(optimizer.state_dict(),
-                       os.path.join(opt.checkpoint_dir, f'{epoch}.opt.weights'))
+            #model.module.save_weights(f"{opt.checkpoint_dir}/{epoch}.weights")
+            torch.save({
+                        'model_state_dict': model.module.state_dict(),
+                        'optimizer_state_dict': optimizer.state_dict()
+                       }, os.path.join(opt.checkpoint_dir, f'{epoch + 1}.weights'))
 
     writer.close()
 
@@ -164,6 +174,8 @@ if __name__ == '__main__':
                         help="size of each image dimension")
     parser.add_argument("--checkpoint_interval", type=int, default=1,
                         help="interval between saving model weights")
+    parser.add_argument("--lr", type=float, default=0.0001,
+                        help="Learning rate of the Adam optimizer")
 
     # Path arguments
     parser.add_argument("--checkpoint_dir", type=str, default="checkpoints",
