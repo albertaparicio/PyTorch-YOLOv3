@@ -1,14 +1,9 @@
 from __future__ import division
-import math
-import time
-import torch
-import torch.nn as nn
-import torch.nn.functional as F
-from torch.autograd import Variable
-import numpy as np
 
-import matplotlib.pyplot as plt
-import matplotlib.patches as patches
+import math
+
+import numpy as np
+import torch
 
 
 def load_classes(path):
@@ -115,7 +110,8 @@ def bbox_iou_numpy(box1, box2):
     iw = np.maximum(iw, 0)
     ih = np.maximum(ih, 0)
 
-    ua = np.expand_dims((box1[:, 2] - box1[:, 0]) * (box1[:, 3] - box1[:, 1]), axis=1) + area - iw * ih
+    ua = np.expand_dims((box1[:, 2] - box1[:, 0]) * (box1[:, 3] - box1[:, 1]),
+                        axis=1) + area - iw * ih
 
     ua = np.maximum(ua, np.finfo(float).eps)
 
@@ -149,7 +145,7 @@ def non_max_suppression(prediction, num_classes, conf_thres=0.5, nms_thres=0.4):
         if not image_pred.size(0):
             continue
         # Get score and class with highest confidence
-        class_conf, class_pred = torch.max(image_pred[:, 5 : 5 + num_classes], 1, keepdim=True)
+        class_conf, class_pred = torch.max(image_pred[:, 5: 5 + num_classes], 1, keepdim=True)
         # Detections ordered as (x1, y1, x2, y2, obj_conf, class_conf, class_pred)
         detections = torch.cat((image_pred[:, :5], class_conf.float(), class_pred.float()), 1)
         # Iterate through all predicted classes
@@ -178,14 +174,16 @@ def non_max_suppression(prediction, num_classes, conf_thres=0.5, nms_thres=0.4):
             max_detections = torch.cat(max_detections).data
             # Add max detections to outputs
             output[image_i] = (
-                max_detections if output[image_i] is None else torch.cat((output[image_i], max_detections))
+                max_detections if output[image_i] is None else torch.cat(
+                    (output[image_i], max_detections))
             )
 
     return output
 
 
 def build_targets(
-    pred_boxes, pred_conf, pred_cls, target, anchors, num_anchors, num_classes, grid_size, ignore_thres, img_dim
+        pred_boxes, pred_conf, pred_cls, target, anchors, num_anchors, num_classes, grid_size,
+        ignore_thres, img_dim
 ):
     nB = target.size(0)
     nA = num_anchors
@@ -218,7 +216,8 @@ def build_targets(
             # Get shape of gt box
             gt_box = torch.FloatTensor(np.array([0, 0, gw, gh])).unsqueeze(0)
             # Get shape of anchor box
-            anchor_shapes = torch.FloatTensor(np.concatenate((np.zeros((len(anchors), 2)), np.array(anchors)), 1))
+            anchor_shapes = torch.FloatTensor(
+                np.concatenate((np.zeros((len(anchors), 2)), np.array(anchors)), 1))
             # Calculate iou between gt and anchor shapes
             anch_ious = bbox_iou(gt_box, anchor_shapes)
             # Where the overlap is larger than threshold set mask to zero (ignore)

@@ -1,6 +1,6 @@
 classes=453
-train=data/yolo_images.train.txt
-valid=data/yolo_images.valid.txt
+train=data/yolo_images.top6.train.txt
+valid=data/yolo_images.top6.valid.txt
 names=data/logos.names
 backup=backup/
 eval=logos
