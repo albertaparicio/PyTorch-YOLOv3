@@ -4,6 +4,7 @@ import argparse
 from datetime import datetime
 from statistics import mean
 
+import shutil
 from tensorboardX import SummaryWriter
 from torch.utils.data import DataLoader
 
@@ -74,7 +75,7 @@ def main(opt):
 
     Tensor = torch.cuda.FloatTensor if cuda else torch.FloatTensor
 
-    os.rmdir('./data/losses')
+    shutil.rmtree('./data/losses')
     os.makedirs('./data/losses')
 
     for epoch in range(opt.start_epochs, opt.epochs):
@@ -97,8 +98,8 @@ def main(opt):
                       'h': [],
                       'conf': [],
                       'cls': [],
-                      'prec': [],
-                      'rec': []
+                      'precision': [],
+                      'recall': []
                       }
 
             for file in os.listdir('./data/losses'):
@@ -137,7 +138,7 @@ def main(opt):
             model.module.seen += imgs.size(0)
 
             # Empty losses dir
-            os.rmdir('./data/losses')
+            shutil.rmtree('./data/losses')
             os.makedirs('./data/losses')
 
         # Validation
