@@ -2,6 +2,7 @@ from __future__ import division
 
 import argparse
 from datetime import datetime
+from statistics import mean
 
 from tensorboardX import SummaryWriter
 from torch.utils.data import DataLoader
@@ -73,6 +74,9 @@ def main(opt):
 
     Tensor = torch.cuda.FloatTensor if cuda else torch.FloatTensor
 
+    os.rmdir('./data/losses')
+    os.makedirs('./data/losses')
+
     for epoch in range(opt.start_epochs, opt.epochs):
         model.train()
         for batch_i, (_, imgs, targets) in enumerate(dataloader):
@@ -86,28 +90,55 @@ def main(opt):
             loss.mean().backward()
             optimizer.step()
 
+            # Read dumped losses
+            losses = {'x': [],
+                      'y': [],
+                      'w': [],
+                      'h': [],
+                      'conf': [],
+                      'cls': [],
+                      'prec': [],
+                      'rec': []
+                      }
+
+            for file in os.listdir('./data/losses'):
+                with open('./data/losses/' + file) as j:
+                    l = json.load(j)
+
+                    losses['x'].append(l['x'])
+                    losses['y'].append(l['y'])
+                    losses['w'].append(l['w'])
+                    losses['h'].append(l['h'])
+                    losses['conf'].append(l['conf'])
+                    losses['cls'].append(l['cls'])
+                    losses['prec'].append(l['precision'])
+                    losses['rec'].append(l['recall'])
+
             print(f'[Epoch {1 + epoch}/{opt.epochs}, Batch {1 + batch_i}/{len(dataloader)}] '
-                  #     f'[Losses: x {model.module.losses["x"]:.5f}, y {model.module.losses["y"]:.5f}, '
-                  #     f'w {model.module.losses["w"]:.5f}, h {model.module.losses["h"]:.5f}, '
-                  #     f'conf {model.module.losses["conf"]:.5f}, cls {model.module.losses["cls"]:.5f}, '
-                  f'total {loss.mean().item():.5f} ')
-            #    f'total {loss.item():.5f}, recall: {model.module.losses["recall"]:.5f}, '
-            #    f'precision: {model.module.losses["precision"]:.5f}]')
+                  f'[Losses: x {mean(losses["x"]):.5f}, y {mean(losses["y"]):.5f}, '
+                  f'w {mean(losses["w"]):.5f}, h {mean(losses["h"]):.5f}, '
+                  f'conf {mean(losses["conf"]):.5f}, cls {mean(losses["cls"]):.5f}, '
+                  f'total {loss.mean().item():.5f}, recall: {mean(losses["recall"]):.5f}, '
+                  f'precision: {mean(losses["precision"]):.5f}]')
 
             # Save results to TensorBoard
             curr_step = epoch * len(dataloader) + batch_i
 
-            # writer.add_scalar('train/loss_x', model.module.losses["x"], curr_step)
-            # writer.add_scalar('train/loss_y', model.module.losses["y"], curr_step)
-            # writer.add_scalar('train/loss_w', model.module.losses["w"], curr_step)
-            # writer.add_scalar('train/loss_h', model.module.losses["h"], curr_step)
-            # writer.add_scalar('train/loss_conf', model.module.losses["conf"], curr_step)
-            # writer.add_scalar('train/loss_cls', model.module.losses["cls"], curr_step)
+            writer.add_scalar('train/loss_x', mean(losses["x"]), curr_step)
+            writer.add_scalar('train/loss_y', mean(losses["y"]), curr_step)
+            writer.add_scalar('train/loss_w', mean(losses["w"]), curr_step)
+            writer.add_scalar('train/loss_h', mean(losses["h"]), curr_step)
+            writer.add_scalar('train/loss_conf', mean(losses["conf"]), curr_step)
+            writer.add_scalar('train/loss_cls', mean(losses["cls"]), curr_step)
             writer.add_scalar('train/loss_total', loss.mean().item(), curr_step)
-            # writer.add_scalar('train/precision', model.module.losses["precision"], curr_step)
-            # writer.add_scalar('train/recall', model.module.losses["recall"], curr_step)
+            writer.add_scalar('train/precision', mean(losses["precision"]), curr_step)
+            writer.add_scalar('train/recall', mean(losses["recall"]), curr_step)
 
             model.module.seen += imgs.size(0)
+
+            # Empty losses dir
+            os.rmdir('./data/losses')
+            os.makedirs('./data/losses')
 
         # Validation
         with torch.no_grad():

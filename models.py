@@ -1,11 +1,12 @@
 from __future__ import division
 
 from collections import defaultdict
-
+import json
 import numpy as np
 import torch
 import torch.nn as nn
 from torch.autograd import Variable
+import uuid
 
 from utils.parse_config import *
 from utils.utils import build_targets
@@ -263,6 +264,10 @@ class Darknet(nn.Module):
 
         self.losses["recall"] /= 3
         self.losses["precision"] /= 3
+
+        with open(f'./data/losses/{str(uuid.uuid4())}.json', 'w') as f:
+            json.dump(self.losses, f)
+
         return sum(output) if is_training else torch.cat(output, 1)
 
     def load_weights(self, weights_path):
