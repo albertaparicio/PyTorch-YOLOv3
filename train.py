@@ -1,10 +1,10 @@
 from __future__ import division
 
 import argparse
+import shutil
 from datetime import datetime
 from statistics import mean
 
-import shutil
 from tensorboardX import SummaryWriter
 from torch.utils.data import DataLoader
 
@@ -47,7 +47,8 @@ def main(opt):
     if cuda:
         model = model.cuda()
 
-    optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=opt.lr, weight_decay=opt.wd)
+    optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=opt.lr,
+                                 weight_decay=opt.wd)
 
     # Load previous checkpoint if start-epoch > 0
     if opt.start_epochs > 0:
@@ -112,8 +113,8 @@ def main(opt):
                     losses['h'].append(l['h'])
                     losses['conf'].append(l['conf'])
                     losses['cls'].append(l['cls'])
-                    losses['prec'].append(l['precision'])
-                    losses['rec'].append(l['recall'])
+                    losses['precision'].append(l['precision'])
+                    losses['recall'].append(l['recall'])
 
             print(f'[Epoch {1 + epoch}/{opt.epochs}, Batch {1 + batch_i}/{len(dataloader)}] '
                   f'[Losses: x {mean(losses["x"]):.5f}, y {mean(losses["y"]):.5f}, '
@@ -151,26 +152,49 @@ def main(opt):
 
                 val_loss = model(imgs, targets)
 
+                # Read dumped losses
+                losses = {'x': [],
+                          'y': [],
+                          'w': [],
+                          'h': [],
+                          'conf': [],
+                          'cls': [],
+                          'precision': [],
+                          'recall': []
+                          }
+
+                for file in os.listdir('./data/losses'):
+                    with open('./data/losses/' + file) as j:
+                        l = json.load(j)
+
+                        losses['x'].append(l['x'])
+                        losses['y'].append(l['y'])
+                        losses['w'].append(l['w'])
+                        losses['h'].append(l['h'])
+                        losses['conf'].append(l['conf'])
+                        losses['cls'].append(l['cls'])
+                        losses['precision'].append(l['precision'])
+                        losses['recall'].append(l['recall'])
+
                 print(f'[Validation, Batch {1 + val_batch_i}/{len(val_dataloader)}] '
-                      #                      f'[Losses: x {model.losses["x"]:.5f}, y {model.losses["y"]:.5f}, '
-                      #                      f'w {model.losses["w"]:.5f}, h {model.losses["h"]:.5f}, '
-                      #                      f'conf {model.losses["conf"]:.5f}, cls {model.losses["cls"]:.5f}, '
-                      #                      f'total {val_loss.item():.5f}, recall: {model.losses["recall"]:.5f}, '
-                      f'total {val_loss.mean().item():.5f}')
-                #                      f'precision: {model.losses["precision"]:.5f}]')
+                      f'[Losses: x {mean(["x"]):.5f}, y {mean(["y"]):.5f}, '
+                      f'w {mean(["w"]):.5f}, h {mean(["h"]):.5f}, '
+                      f'conf {mean(["conf"]):.5f}, cls {mean(["cls"]):.5f}, '
+                      f'total {val_loss.mean().item():.5f}, recall: {mean(["recall"]):.5f}, '
+                      f'precision: {mean(["precision"]):.5f}]')
 
                 # Save results to TensorBoard
                 curr_step = epoch * len(val_dataloader) + val_batch_i
 
-                #                writer.add_scalar('val/loss_x', model.module.losses["x"], curr_step)
-                #                writer.add_scalar('val/loss_y', model.module.losses["y"], curr_step)
-                #                writer.add_scalar('val/loss_w', model.module.losses["w"], curr_step)
-                #                writer.add_scalar('val/loss_h', model.module.losses["h"], curr_step)
-                #                writer.add_scalar('val/loss_conf', model.module.losses["conf"], curr_step)
-                #                writer.add_scalar('val/loss_cls', model.module.losses["cls"], curr_step)
+                writer.add_scalar('val/loss_x', mean(losses["x"]), curr_step)
+                writer.add_scalar('val/loss_y', mean(losses["y"]), curr_step)
+                writer.add_scalar('val/loss_w', mean(losses["w"]), curr_step)
+                writer.add_scalar('val/loss_h', mean(losses["h"]), curr_step)
+                writer.add_scalar('val/loss_conf', mean(losses["conf"]), curr_step)
+                writer.add_scalar('val/loss_cls', mean(losses["cls"]), curr_step)
                 writer.add_scalar('val/loss_total', val_loss.mean().item(), curr_step)
-        #               writer.add_scalar('val/precision', model.module.losses["precision"], curr_step)
-        #               writer.add_scalar('val/recall', model.module.losses["recall"], curr_step)
+                writer.add_scalar('val/precision', mean(losses["precision"]), curr_step)
+                writer.add_scalar('val/recall', mean(losses["recall"]), curr_step)
 
         if epoch % opt.checkpoint_interval == 0:
             # model.module.save_weights(f"{opt.checkpoint_dir}/{epoch}.weights")
