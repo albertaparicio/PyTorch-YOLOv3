@@ -177,11 +177,11 @@ def main(opt):
                         losses['recall'].append(l['recall'])
 
                 print(f'[Validation, Batch {1 + val_batch_i}/{len(val_dataloader)}] '
-                      f'[Losses: x {mean(["x"]):.5f}, y {mean(["y"]):.5f}, '
-                      f'w {mean(["w"]):.5f}, h {mean(["h"]):.5f}, '
-                      f'conf {mean(["conf"]):.5f}, cls {mean(["cls"]):.5f}, '
-                      f'total {val_loss.mean().item():.5f}, recall: {mean(["recall"]):.5f}, '
-                      f'precision: {mean(["precision"]):.5f}]')
+                      f'[Losses: x {mean(losses["x"]):.5f}, y {mean(losses["y"]):.5f}, '
+                      f'w {mean(losses["w"]):.5f}, h {mean(losses["h"]):.5f}, '
+                      f'conf {mean(losses["conf"]):.5f}, cls {mean(losses["cls"]):.5f}, '
+                      f'total {val_loss.mean().item():.5f}, recall: {mean(losses["recall"]):.5f}, '
+                      f'precision: {mean(losses["precision"]):.5f}]')
 
                 # Save results to TensorBoard
                 curr_step = epoch * len(val_dataloader) + val_batch_i
