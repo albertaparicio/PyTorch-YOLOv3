@@ -22,6 +22,8 @@ def main(args):
                 f_i.write(data_item['img'] + '\n')
                 f_l.write(data_item['txt'] + '\n')
 
+    # TODO Change label numbers so that they belong in [0,TopN-1]
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(

@@ -61,20 +61,29 @@ def main(args):
     with open(image_basename + '.train.txt', 'w'
               ) as i, open(label_basename + '.train.txt', 'w') as l_f:
         for f in train_res:
-            i.write(images_list[f] + '\n')
-            l_f.write(label_files[f] + '\n')
+            try:
+                i.write(images_list[f] + '\n')
+                l_f.write(label_files[f] + '\n')
+            except KeyError:
+                continue
 
     with open(image_basename + '.valid.txt', 'w'
               ) as i, open(label_basename + '.valid.txt', 'w') as l_f:
         for f in valid_res:
-            i.write(images_list[f] + '\n')
-            l_f.write(label_files[f] + '\n')
+            try:
+                i.write(images_list[f] + '\n')
+                l_f.write(label_files[f] + '\n')
+            except KeyError:
+                continue
 
     with open(image_basename + '.test.txt', 'w'
               ) as i, open(label_basename + '.test.txt', 'w') as l_f:
         for f in test_res:
-            i.write(images_list[f] + '\n')
-            l_f.write(label_files[f] + '\n')
+            try:
+                i.write(images_list[f] + '\n')
+                l_f.write(label_files[f] + '\n')
+            except KeyError:
+                continue
 
 
 if __name__ == '__main__':
