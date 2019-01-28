@@ -76,10 +76,10 @@ def main(opt):
 
     Tensor = torch.cuda.FloatTensor if cuda else torch.FloatTensor
 
-    shutil.rmtree('./data/losses')
-    os.makedirs('./data/losses')
-
     for epoch in range(opt.start_epochs, opt.epochs):
+        shutil.rmtree('./data/losses')
+        os.makedirs('./data/losses')
+
         model.train()
         for batch_i, (_, imgs, targets) in enumerate(dataloader):
             imgs = Variable(imgs.type(Tensor))
