@@ -4,8 +4,8 @@ import json
 import cv2
 import numpy as np
 
-from data_aug import (Sequence, RandomScale, RandomRotate,
-                      RandomTranslate)
+from utils.data_aug import (Sequence, RandomScale, RandomRotate,
+                            RandomTranslate)
 
 
 def parse_yolo_coordinates(rows, img):

@@ -1,11 +1,16 @@
 import glob
 import os
+import uuid
 
+import cv2
 import numpy as np
 import torch
 from PIL import Image
 from skimage.transform import resize
 from torch.utils.data import Dataset
+
+from data_aug import (Sequence, RandomScale, RandomRotate,
+                      RandomTranslate)
 
 
 class ImageFolder(Dataset):
@@ -39,7 +44,7 @@ class ImageFolder(Dataset):
 
 
 class ListDataset(Dataset):
-    def __init__(self, list_path, img_size=416):
+    def __init__(self, list_path, img_size=416, train=True):
         with open(list_path, 'r') as file:
             self.img_files = file.readlines()
         self.label_files = [
@@ -47,6 +52,7 @@ class ListDataset(Dataset):
             path in self.img_files]
         self.img_shape = (img_size, img_size)
         self.max_objects = 50
+        self.train = train
 
     def __getitem__(self, index):
 
@@ -55,7 +61,63 @@ class ListDataset(Dataset):
         # ---------
 
         img_path = self.img_files[index % len(self.img_files)].rstrip()
-        img = np.array(Image.open(img_path))
+        label_path = self.label_files[index % len(self.img_files)].rstrip()
+
+        _, ext = os.path.splitext(img_path)
+        u = str(uuid.uuid4())
+        aux_img_path = os.path.join('/tmp', f'{u}_img{ext}')
+        aux_lab_path = os.path.join('/tmp', f'{u}_lab{ext}')
+
+        # Data augmentation
+        if self.train:
+            img = cv2.imread(img_path)
+            bboxes = parse_yolo_coordinates(open(label_path, "r").read().split("\n"), img)
+            transforms = Sequence(
+                [RandomScale(0.2, diff=True), RandomRotate(20), RandomTranslate(0.02)])
+
+            og_img = img
+            og_boxes = bboxes
+
+            # Keep trying to transform if there are errors
+            # There is some randomness in the transformation, so we cannot
+            # know when or what there will be errors with the bboxes
+            while True:
+                try:
+                    img, bboxes = transforms(og_img, og_boxes)
+
+                    break
+                except IndexError:
+                    continue
+
+            status = write_yolo_coordinates(
+                bboxes, img,
+                aux_lab_path)
+
+            if status:
+                cv2.imwrite(aux_img_path, img)
+
+                img = np.array(Image.open(aux_img_path))
+
+                labels = None
+                if os.path.exists(aux_lab_path):
+                    labels = np.loadtxt(aux_lab_path).reshape(-1, 5)
+
+                os.remove(aux_img_path)
+                os.remove(aux_lab_path)
+
+            else:
+                img = np.array(Image.open(img_path))
+
+                labels = None
+                if os.path.exists(label_path):
+                    labels = np.loadtxt(label_path).reshape(-1, 5)
+
+        else:
+            img = np.array(Image.open(img_path))
+
+            labels = None
+            if os.path.exists(label_path):
+                labels = np.loadtxt(label_path).reshape(-1, 5)
 
         # Handles images with less than three channels
         while len(img.shape) != 3:
@@ -83,11 +145,7 @@ class ListDataset(Dataset):
         #  Label
         # ---------
 
-        label_path = self.label_files[index % len(self.img_files)].rstrip()
-
-        labels = None
-        if os.path.exists(label_path):
-            labels = np.loadtxt(label_path).reshape(-1, 5)
+        if labels is not None:
             # Extract coordinates for unpadded + unscaled image
             x1 = w * (labels[:, 1] - labels[:, 3] / 2)
             y1 = h * (labels[:, 2] - labels[:, 4] / 2)
@@ -113,3 +171,46 @@ class ListDataset(Dataset):
 
     def __len__(self):
         return len(self.img_files)
+
+
+def parse_yolo_coordinates(rows, img):
+    width_img = img.shape[1]
+    height_img = img.shape[0]
+    ret = []
+    for r in rows:
+
+        a = dict()
+        r = r.split(" ")
+        if len(r) == 1:
+            continue
+        x_center = float(r[1])
+        y_center = float(r[2])
+        width = float(r[3])
+        height = float(r[4])
+        label = float(r[0])
+        ret.append([width_img * (x_center - width / 2.0), height_img * (y_center - height / 2.0),
+                    width_img * (x_center + width / 2.0), height_img * (y_center + height / 2.0),
+                    label])
+    y = np.array([np.array(xi) for xi in ret])
+    return y
+
+
+def write_yolo_coordinates(bboxes, img, out_file):
+    width_img = img.shape[1]
+    height_img = img.shape[0]
+
+    # bb: x1 y1 x2 y2 c
+    if len(bboxes) == 0:
+        return False
+
+    with open(out_file, "w") as a:
+        for bb in bboxes:
+            width = (bb[2] - bb[0]) / float(width_img)
+            height = (bb[3] - bb[1]) / float(height_img)
+
+            center_x = (bb[0] + bb[2]) / (2.0 * width_img)
+            center_y = (bb[1] + bb[3]) / (2.0 * height_img)
+
+            a.write(f'{int(bb[4])} {center_x} {center_y} {width} {height}\n')
+
+    return True

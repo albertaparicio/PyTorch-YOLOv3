@@ -68,11 +68,12 @@ def main(opt):
 
     # Get dataloaders
     dataloader = torch.utils.data.DataLoader(
-        ListDataset(train_path), batch_size=opt.batch_size, shuffle=True, num_workers=opt.n_cpu
-    )
+        ListDataset(train_path, train=True), batch_size=opt.batch_size,
+        shuffle=True, num_workers=opt.n_cpu)
+
     val_dataloader = torch.utils.data.DataLoader(
-        ListDataset(val_path), batch_size=opt.batch_size, shuffle=False, num_workers=opt.n_cpu
-    )
+        ListDataset(val_path, train=False), batch_size=opt.batch_size,
+        shuffle=False, num_workers=opt.n_cpu)
 
     Tensor = torch.cuda.FloatTensor if cuda else torch.FloatTensor
 
