@@ -57,7 +57,10 @@ def main(args):
             labname = labname.strip()
 
             # Read image size
-            w_im, h_im = get_image_size(imname)
+            try:
+                w_im, h_im = get_image_size(imname)
+            except TypeError:
+                continue
 
             # Read label data
             valid_lines = []

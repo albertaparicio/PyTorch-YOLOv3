@@ -5,8 +5,8 @@ import sys
 import cv2
 import numpy as np
 
-from bbox_util import (clip_box, rotate_im, get_corners, rotate_box,
-                       get_enclosing_box, letterbox_image)
+from .bbox_util import (clip_box, rotate_im, get_corners, rotate_box,
+                        get_enclosing_box, letterbox_image)
 
 lib_path = os.path.join(os.path.realpath("."), "data_aug")
 sys.path.append(lib_path)

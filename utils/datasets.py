@@ -9,8 +9,8 @@ from PIL import Image
 from skimage.transform import resize
 from torch.utils.data import Dataset
 
-from data_aug import (Sequence, RandomScale, RandomRotate,
-                      RandomTranslate)
+from .data_aug import (Sequence, RandomScale, RandomRotate,
+                       RandomTranslate)
 
 
 class ImageFolder(Dataset):
