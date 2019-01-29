@@ -41,8 +41,8 @@ def main(opt):
     # Initiate model
     model = Darknet(opt.model_config_path)
     model = torch.nn.DataParallel(model)
-    model.module.load_weights(opt.weights_path)
-    # model.apply(weights_init_normal)
+    # model.module.load_weights(opt.weights_path)
+    model.apply(weights_init_normal)
 
     if cuda:
         model = model.cuda()

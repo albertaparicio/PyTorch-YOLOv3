@@ -1,4 +1,4 @@
-classes=453
+classes=6
 train=data/yolo_images.top6.train.txt
 valid=data/yolo_images.top6.valid.txt
 names=data/logos.names
